@@ -22,14 +22,15 @@ import {
   getProvider,
   getSigner,
 } from './connection/metamask';
-import { formatEther, Contract, toBeHex } from 'ethers';
-import winner from './abi/winner.json';
+// import { formatEther, Contract, toBeHex } from 'ethers';
+import { formatEther, Contract } from 'ethers';
+import lead from './abi/lead.json';
 
 function App() {
   const [account, setAccount] = useState('');
   const [myBalance, setMyBalance] = useState('');
-  const [winnerName, setWinnerName] = useState('');
-  const [newWinner, setNewWinner] = useState('');
+  const [leadName, setLeadName] = useState('');
+  const [newLead, setNewLead] = useState('');
   const [chainError, setChainError] = useState(null);
   const toast = useToast();
 
@@ -38,7 +39,7 @@ function App() {
       getBalance(account);
       setChainError(null);
     }
-    console.log(winner);
+    console.log(lead);
   }, [chainError, account]);
 
   const checkMetamask = async () => {
@@ -64,38 +65,51 @@ function App() {
     return balance;
   };
 
-  const winnerContract = async () => {
+  const leadContract = async () => {
     const abi = [
       'function getLead() view external returns (string memory)',
       'function setLead(string) returns (string)',
+
+      'event LeadSet(address indexed from, address indexed to, uint256 value)'
+
     ];
+    
+    const provider = getProvider();
+    const contract = new Contract("dai.tokens.ethers.eth", abi, provider)
+
+    contract.on("LeadSet", (from, to, value, event) => {
+      const amount = formatEther(value, 18)
+      console.log(`${ from } => ${ to }: ${ amount }`);
+    });
+    
+
     const signer = await getSigner();
     // Create a contract
-    const winnerContract = new Contract(
+    const leadContract = new Contract(
       '0xB0b72FB76a9390943A869eD2e837D183Cd44F954',
       abi,
       signer
     );
-    return winnerContract;
+    return leadContract;
   };
 
-  const getWinner = async () => {
+  const getLead = async () => {
     try {
-      const winnerCon = await winnerContract();
-      console.log(winnerCon);
-      const currentWinner = await winnerCon.getLead();
-      setWinnerName(currentWinner);
-      console.log(currentWinner);
+      const leadCon = await leadContract();
+      console.log(leadCon);
+      const currentLead = await leadCon.getLead();
+      setLeadName(currentLead);
+      console.log(currentLead);
     } catch (error) {
       console.log(error);
     }
   };
 
-  const setWinner = async () => {
+  const setLead = async () => {
     try {
-      const winnerCon = await winnerContract();
-      console.log(winnerCon);
-      const tx = await winnerCon.setLead(newWinner);
+      const leadCon = await leadContract();
+      console.log(leadCon);
+      const tx = await leadCon.setLead(newLead);
       const receipt = await tx.wait(1);
       if (receipt.status) {
         toast({
@@ -142,15 +156,15 @@ function App() {
               {account ? 'Connected' : 'Connect Wallet'}
             </Button>
             <HStack spacing="24px">
-              <Button onClick={getWinner}>GetLead</Button>
-              <Text>{winnerName}</Text>
+              <Button onClick={getLead}>GetLead</Button>
+              <Text>{leadName}</Text>
             </HStack>
             <HStack spacing="24px">
               <Input
-                value={newWinner}
-                onChange={e => setNewWinner(e.target.value)}
+                value={newLead}
+                onChange={e => setNewLead(e.target.value)}
               ></Input>
-              <Button onClick={setWinner}>Set Lead</Button>
+              <Button onClick={setLead}>Set Lead</Button>
             </HStack>
           </VStack>
         </Grid>
